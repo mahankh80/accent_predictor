@@ -8,4 +8,3 @@ sentencepiece
 torch==2.7.1
 torchaudio==2.7.1
 Pillow==9.0.0  
---upgrade pip
