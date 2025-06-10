@@ -4,13 +4,31 @@ import os
 import yt_dlp
 from extract_audio import process_video
 from accent_predictor import detect_accent
+import subprocess
+import sys
+
+# === Function to Install Missing Packages ===
+def install_requirements():
+    try:
+        # Check if pip is available and requirements.txt exists
+        requirements_path = Path(__file__).parent / 'requirements.txt'
+        if requirements_path.exists():
+            st.text("📦 Installing missing packages from requirements.txt...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(requirements_path)])
+            st.success("✅ Packages installed successfully.")
+        else:
+            st.warning("⚠️ No requirements.txt file found. Please ensure it's uploaded if needed.")
+    except Exception as e:
+        st.error(f"❌ Error installing packages: {e}")
 
 # === General Settings ===
 st.set_page_config(page_title="Accent Detector", layout="centered")
 st.title("🧠🎙️ English Accent & Language Detector")
 
+# === Install Requirements if needed ===
+install_requirements()
+
 # === Path Variables ===
-# For Streamlit, paths should be relative or dynamically set based on the environment
 OUTPUT_AUDIO_DIR = Path("output") / "audio"
 OUTPUT_TEXT_DIR = Path("output") / "text"
 

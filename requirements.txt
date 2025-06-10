@@ -1,5 +1,6 @@
 streamlit
 speechbrain
 yt-dlp
+yt_dlp
 requests
 ffmpeg
