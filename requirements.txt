@@ -1,6 +1,8 @@
 streamlit
 speechbrain
 yt-dlp
-yt_dlp
 requests
 ffmpeg
+pip 
+setuptools
+sentencepiece
