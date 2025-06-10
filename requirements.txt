@@ -1,0 +1,8 @@
+speechbrain
+streamlit
+yt-dlp
+requests
+os
+shutil
+subprocess
+ffmpeg
