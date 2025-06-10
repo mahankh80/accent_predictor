@@ -1,8 +1,7 @@
 import os
 import shutil
 from speechbrain.pretrained import EncoderClassifier
-from tkinter import filedialog
-from tkinter import Tk
+import streamlit as st
 
 # === Load Accent Detection Model ===
 def load_accent_model():
@@ -50,19 +49,14 @@ def detect_accent_from_audio(audio_path: str):
 
 # === Select Audio File via File Dialog ===
 def select_audio_file():
-    root = Tk()
-    root.withdraw()  # Hide the main Tkinter window
-
-    # Get the dynamic path to the "output/extracted_audio" folder
-    audio_folder = os.path.join(os.path.dirname(__file__), "output", "extracted_audio")  # Dynamic folder path
-
-    # Open the file dialog in the extracted_audio folder
-    file_path = filedialog.askopenfilename(
-        title="Select Audio File", 
-        filetypes=[("WAV Files", "*.wav")],
-        initialdir=audio_folder  # Start file dialog in extracted_audio folder
-    )
-    return file_path
+    uploaded_file = st.file_uploader("Upload your audio file", type=["wav"])
+    if uploaded_file is not None:
+        # Save the uploaded file to a temporary directory
+        temp_audio_path = os.path.join(os.path.dirname(__file__), "output", "extracted_audio", uploaded_file.name)
+        with open(temp_audio_path, "wb") as f:
+            f.write(uploaded_file.read())
+        return temp_audio_path
+    return None
 
 # === Final Accent Detection Function ===
 def detect_accent(audio_path: str):
@@ -72,15 +66,24 @@ def detect_accent(audio_path: str):
         "accent_score": confidence
     }
 
-# === Test the Code ===
+# === Streamlit UI ===
 if __name__ == "__main__":
-    audio_file = select_audio_file()  # Ask the user to select an audio file
+    st.title("🧠🎙️ English Accent & Language Detector")
+
+    audio_file = select_audio_file()  # Ask the user to upload an audio file
     if not audio_file:
-        print("❌ No audio file selected.")
+        st.error("❌ No audio file selected.")
     else:
         # Detect accent
         result = detect_accent(audio_file)
 
         # Display the results
-        print("Accent:", result["accent"])
-        print("Accent Confidence:", result["accent_score"])
+        st.markdown("### 🧾 Final Results")
+        st.markdown(f"**🗣️ English Accent:** `{result['accent']}`  ")
+        st.markdown(f"**📈 Accent Confidence:** `{round(result['accent_score']*100, 2)}%`  ")
+
+        st.markdown("---")
+        with st.expander("📜 Show Full Transcript"):
+            st.text("This is a placeholder for full transcript.")  # You can replace this with the actual transcript content
+
+        st.balloons()

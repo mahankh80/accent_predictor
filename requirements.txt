@@ -6,3 +6,6 @@ ffmpeg
 pip 
 setuptools
 sentencepiece
+torch
+torchvision 
+torchaudio
