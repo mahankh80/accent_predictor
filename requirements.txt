@@ -2,7 +2,7 @@ speechbrain
 streamlit
 yt-dlp
 requests
-ffmpeg
 os
 shutil
 subprocess
+ffmpeg
