@@ -1,66 +1,90 @@
-import streamlit as st
-from pathlib import Path
 import os
-import yt_dlp
-from extract_audio import process_video
-from accent_predictor import detect_accent
+import shutil
+from speechbrain.pretrained import EncoderClassifier
+import streamlit as st
+from PIL import Image  # استفاده از Pillow به جای imghdr
 
-# === General Settings ===
-st.set_page_config(page_title="Accent Detector", layout="centered")
-st.title("🧠🎙️ English Accent & Language Detector")
+# === Load Accent Detection Model ===
+def load_accent_model():
+    model_path = os.path.join(os.path.dirname(__file__), "..", "models", "accent-id-commonaccent_ecapa")  # Path to accent model
+    hyperparams_path = os.path.join(model_path, "hyperparams.yaml")
+    if not os.path.exists(hyperparams_path):
+        print(f"❌ Hyperparameters file not found at: {hyperparams_path}")
+        return None  # Handle the case where the model is not found
 
-# === Path Variables ===
-# For Streamlit, paths should be relative or dynamically set based on the environment
-OUTPUT_AUDIO_DIR = Path("output") / "audio"
-OUTPUT_TEXT_DIR = Path("output") / "text"
+    model = EncoderClassifier.from_hparams(
+        source=model_path,  # Path to model
+        savedir=model_path,  # Save the model in the same directory
+    )
+    return model
 
-# Ensure output directories exist
-OUTPUT_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-OUTPUT_TEXT_DIR.mkdir(parents=True, exist_ok=True)
+# === Predict Accent from Audio File ===
+def detect_accent_from_audio(audio_path: str):
+    print(f"Checking audio file at path: {audio_path}")
+    if not os.path.exists(audio_path):
+        print(f"❌ Audio file not found at: {audio_path}")
+        return None, None
+    
+    model = load_accent_model()  # Load the accent model
+    if model is None:
+        return None, None
+    
+    try:
+        temp_audio_dir = os.path.join(os.path.dirname(__file__), "temp_audio")
+        if not os.path.exists(temp_audio_dir):
+            os.makedirs(temp_audio_dir)  # Create folder if not existing
+        
+        audio_copy_path = os.path.join(temp_audio_dir, "audio.wav")
+        print(f"Copying audio to: {audio_copy_path}")
+        shutil.copy(audio_path, audio_copy_path)  # Copy the audio file to the new location
+        
+        result = model.classify_file(audio_copy_path)  # Classify the accent
+        print(f"Classification result: {result}")
+        accent = result[3][0]  # Predicted accent
+        confidence = result[1].item()  # Confidence in the prediction
+        return accent, confidence
+    
+    except Exception as e:
+        print(f"❌ Error copying audio file: {e}")
+        return None, None
 
-# === UI ===
-input_source = st.radio("📥 Choose video source:", ["Upload File", "Provide a Link"])
-
-video_path = None
-if input_source == "Upload File":
-    uploaded_file = st.file_uploader("🎬 Upload your video (mp4, mkv)", type=["mp4", "mkv"])
-    if uploaded_file:
-        video_path = OUTPUT_AUDIO_DIR / "uploaded_video.mp4"
-        with open(video_path, "wb") as f:
+# === Select Audio File via File Dialog ===
+def select_audio_file():
+    uploaded_file = st.file_uploader("Upload your audio file", type=["wav"])
+    if uploaded_file is not None:
+        # Save the uploaded file to a temporary directory
+        temp_audio_path = os.path.join(os.path.dirname(__file__), "output", "extracted_audio", uploaded_file.name)
+        with open(temp_audio_path, "wb") as f:
             f.write(uploaded_file.read())
-        st.success("✅ File uploaded successfully")
-else:
-    video_url = st.text_input("🔗 Enter the video link")
-    if video_url:
-        try:
-            with st.spinner("Downloading video from YouTube..."):
-                ydl_opts = {
-                    'format': 'best',
-                    'outtmpl': str(OUTPUT_AUDIO_DIR / "downloaded_video.mp4"),  # Path to save the video
-                }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([video_url])
-                video_path = OUTPUT_AUDIO_DIR / "downloaded_video.mp4"
-                st.success("✅ Video downloaded successfully")
-        except Exception as e:
-            st.error(f"❌ Error downloading video: {e}")
+        return temp_audio_path
+    return None
 
-if video_path and st.button("🚀 Start Analysis"):
-    # Extract audio from video
-    with st.spinner("Extracting audio from video..."):
-        audio_path = process_video(str(video_path), output_filename="audio.wav")
+# === Final Accent Detection Function ===
+def detect_accent(audio_path: str):
+    accent, confidence = detect_accent_from_audio(audio_path)  # Detect accent from the audio file
+    return {
+        "accent": accent,
+        "accent_score": confidence
+    }
 
-    # Detect language and accent
-    with st.spinner("Detecting language and accent..."):
-        result = detect_accent(str(audio_path))  # Just detect accent now
+# === Streamlit UI ===
+if __name__ == "__main__":
+    st.title("🧠🎙️ English Accent & Language Detector")
 
-    # === Show Results ===
-    st.markdown("### 🧾 Final Results")
-    st.markdown(f"**🗣️ English Accent:** `{result['accent']}`  ")
-    st.markdown(f"**📈 Accent Confidence:** `{round(result['accent_score']*100, 2)}%`  ")
+    audio_file = select_audio_file()  # Ask the user to upload an audio file
+    if not audio_file:
+        st.error("❌ No audio file selected.")
+    else:
+        # Detect accent
+        result = detect_accent(audio_file)
 
-    st.markdown("---")
-    with st.expander("📜 Show Full Transcript"):
-        st.text("This is a placeholder for full transcript.")  # You can replace this with the actual transcript content
+        # Display the results
+        st.markdown("### 🧾 Final Results")
+        st.markdown(f"**🗣️ English Accent:** `{result['accent']}`  ")
+        st.markdown(f"**📈 Accent Confidence:** `{round(result['accent_score']*100, 2)}%`  ")
 
-    st.balloons()
+        st.markdown("---")
+        with st.expander("📜 Show Full Transcript"):
+            st.text("This is a placeholder for full transcript.")  # You can replace this with the actual transcript content
+
+        st.balloons()

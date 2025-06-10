@@ -7,4 +7,4 @@ setuptools==58.0.4
 sentencepiece
 torch==2.7.1
 torchaudio==2.7.1
-imghdr
+PIL
