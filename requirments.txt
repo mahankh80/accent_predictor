@@ -1,0 +1,5 @@
+speechbrain
+streamlit
+yt-dlp
+requests
+ffmpeg
