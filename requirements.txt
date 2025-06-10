@@ -1,7 +1,5 @@
-speechbrain
 streamlit
+speechbrain
 yt-dlp
 requests
-shutil
-subprocess
 ffmpeg
